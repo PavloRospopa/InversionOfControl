@@ -1,10 +1,10 @@
-// Вывод из глобального контекста модуля
-console.log('From application global context');
+var fileName = './README.md';
+console.log('Application going to read ' + fileName);
 
-// Объявляем функцию для события таймера
-function timerEvent() {
-  console.log('From application timer event');
-}
+fs.readFile(fileName, function (err, src) {
+    console.log('File ' + fileName + ' size ' + src.length);
+});
 
-// Устанавливаем функцию на таймер
-setTimeout(timerEvent, 1000);
+fs.stat(fileName, function (err, stats) {
+    console.log('is file stat val: ' + stats.isFile());
+});
