@@ -1,10 +1,8 @@
 var fileName = './README.md';
-console.log('Application going to read ' + fileName);
+console.log('Application going to analyze ' + fileName);
 
-fs.readFile(fileName, function (err, src) {
-    console.log('File ' + fileName + ' size ' + src.length);
-});
-
-fs.stat(fileName, function (err, stats) {
-    console.log('is file stat val: ' + stats.isFile());
-});
+setInterval(function () {
+    fs.stat(fileName, function (err, stats) {
+        console.log('isFile property value: ' + stats.isFile());
+    });
+}, 10000);
