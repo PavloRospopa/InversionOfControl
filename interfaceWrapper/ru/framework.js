@@ -1,132 +1,134 @@
 // Пример оборачивания функции в песочнице
-
-var fs = require('fs'), vm = require('vm');
+'use strict';
+const fs = require('fs'), vm = require('vm');
 
 function Statistics() {
-    var _funcInvokesCount = 0;
-    var _callbackInvokesCount = 0;
-    var _sumFunctionTime = 0;
-    var _sumCallbackTime = 0;
+  let funcInvokesCount = 0;
+  let callbackInvokesCount = 0;
+  let sumFunctionTime = 0;
+  let sumCallbackTime = 0;
 
-    this.incFuncInvokesCount = function () {
-        _funcInvokesCount++;
-    };
+  this.incFuncInvokesCount = function() {
+    funcInvokesCount++;
+  };
 
-    this.getFuncInvokesCount = function () {
-      return _funcInvokesCount;
-    };
+  this.getFuncInvokesCount = function() {
+    return funcInvokesCount;
+  };
 
-    this.incCallbackInvokesCount = function () {
-        _callbackInvokesCount++;
-    };
+  this.incCallbackInvokesCount = function() {
+    callbackInvokesCount++;
+  };
 
-    this.getCallbackInvokesCount = function () {
-      return _callbackInvokesCount;
-    };
+  this.getCallbackInvokesCount = function() {
+    return callbackInvokesCount;
+  };
 
-    this.addFunctionTime = function (time) {
-        _sumFunctionTime += time;
-    };
+  this.addFunctionTime = function(time) {
+    sumFunctionTime += time;
+  };
 
-    this.calculateAvgFunctionTime = function () {
-        return _sumFunctionTime / _funcInvokesCount;
-    };
+  this.calculateAvgFunctionTime = function() {
+    return sumFunctionTime / funcInvokesCount;
+  };
 
-    this.addCallbackTime = function (time) {
-        _sumCallbackTime += time;
-    };
+  this.addCallbackTime = function(time) {
+    sumCallbackTime += time;
+  };
 
-    this.calculateAvgCallbackTime = function () {
-        return _sumCallbackTime / _callbackInvokesCount;
-    }
+  this.calculateAvgCallbackTime = function() {
+    return sumCallbackTime / callbackInvokesCount;
+  };
 }
 
-var stat = new Statistics();
+const stat = new Statistics();
 
 function cloneInterface(anInterface) {
-    var clone = {};
-    for (var key in anInterface) {
-        clone[key] = wrapFunction(key, anInterface[key]);
-    }
+  const clone = {};
+  for (const key in anInterface) {
+    clone[key] = wrapFunction(key, anInterface[key]);
+  }
 
-    return clone;
+  return clone;
 }
 
 function wrapFunction(fnName, fn) {
 
-    return function wrapper() {
-        stat.incFuncInvokesCount();
+  return function wrapper(...params) {
+    stat.incFuncInvokesCount();
 
-        var args = [];
-        Array.prototype.push.apply(args, arguments);
-        console.log('Call: ' + fnName);
-        console.dir(args);
+    const args = [];
+    Array.prototype.push.apply(args, params);
+    console.log('Call: ' + fnName);
+    console.dir(args);
 
-        // wrap up callback if it exists
-        var callback = args[args.length - 1];
-        if (typeof callback === 'function') {
-            args[args.length - 1] = wrapCallback(fnName, callback);
-        }
-
-        //measure function execution time
-        var hrstart = process.hrtime();
-        var result = fn.apply(undefined, args);
-        var hrend = process.hrtime(hrstart);
-
-        //add time measured in milliseconds (hrend[1] - in nanoseconds)
-        stat.addFunctionTime(hrend[1] / 1000000);
-
-        return result;
+    // wrap up callback if it exists
+    const callback = args[args.length - 1];
+    if (typeof callback === 'function') {
+      args[args.length - 1] = wrapCallback(fnName, callback);
     }
+
+    //measure function execution time
+    const hrstart = process.hrtime();
+    const result = fn(...args);
+    const hrend = process.hrtime(hrstart);
+
+    //add time measured in milliseconds (hrend[1] - in nanoseconds)
+    stat.addFunctionTime(hrend[1] / 1000000);
+
+    return result;
+  };
 }
 
 function wrapCallback(fnName, callback) {
 
-    return function wrapper() {
-        stat.incCallbackInvokesCount();
+  return function wrapper(...params) {
+    stat.incCallbackInvokesCount();
 
-        var args = [];
-        Array.prototype.push.apply(args, arguments);
-        console.log(fnName + ' callback args: ');
-        console.dir(args);
+    const args = [];
+    Array.prototype.push.apply(args, params);
+    console.log(fnName + ' callback args: ');
+    console.dir(args);
 
-        var hrstart = process.hrtime();
-        var result = callback.apply(undefined, args);
-        var hrend = process.hrtime(hrstart);
+    const hrstart = process.hrtime();
+    const result = callback(...args);
+    const hrend = process.hrtime(hrstart);
 
-        //add time measured in milliseconds (hrend[1] - in nanoseconds)
-        stat.addCallbackTime(hrend[1] / 1000000);
+    //add time measured in milliseconds (hrend[1] - in nanoseconds)
+    stat.addCallbackTime(hrend[1] / 1000000);
 
-        return result;
-    }
+    return result;
+  };
 }
 
 // Объявляем хеш из которого сделаем контекст-песочницу
-var context = {
-    module: {},
-    console: console,
-    setInterval: setInterval,
-    // Помещаем ссылку на fs API в песочницу
-    fs: cloneInterface(fs)
+const context = {
+  module: {},
+  console,
+  setInterval,
+  // Помещаем ссылку на fs API в песочницу
+  fs: cloneInterface(fs)
 };
 
 // Преобразовываем хеш в контекст
 context.global = context;
-var sandbox = vm.createContext(context);
+const sandbox = vm.createContext(context);
 
 // Читаем исходный код приложения из файла
-var fileName = './application.js';
-fs.readFile(fileName, function (err, src) {
-    // Запускаем код приложения в песочнице
-    var script = vm.createScript(src, fileName);
-    script.runInNewContext(sandbox);
+const fileName = './application.js';
+fs.readFile(fileName, (err, src) => {
+  // Запускаем код приложения в песочнице
+  const script = vm.createScript(src, fileName);
+  script.runInNewContext(sandbox);
 
-    //print statistics every 30 sec in console
-    console.log('Updating statistics every 30 secs...');
-    setInterval(function () {
-        console.log('1) Function invokes count: ' + stat.getFuncInvokesCount());
-        console.log('2) Callback invokes count: ' + stat.getCallbackInvokesCount());
-        console.log('3) Average function execution time: ' + stat.calculateAvgFunctionTime() + ' ms');
-        console.log('4) Average callback execution time: ' + stat.calculateAvgCallbackTime() + ' ms\n');
-    }, 30000);
+  //print statistics every 30 sec in console
+  console.log('Updating statistics every 30 secs...');
+  setInterval(() => {
+    console.log('1) Function invokes count: ' + stat.getFuncInvokesCount());
+    console.log('2) Callback invokes count: ' + stat.getCallbackInvokesCount());
+    console.log('3) Average function execution time: ' +
+      stat.calculateAvgFunctionTime() + ' ms');
+    console.log('4) Average callback execution time: ' +
+      stat.calculateAvgCallbackTime() + ' ms\n');
+  }, 30000);
 });
